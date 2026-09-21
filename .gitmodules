@@ -1,3 +1,6 @@
 [submodule "repositories/grill-with-ui"]
 	path = repositories/grill-with-ui
 	url = git@github.com:cachemoney/grill-with-ui.git
+[submodule "repositories/wayfinder-ui"]
+	path = repositories/wayfinder-ui
+	url = git@github.com:cachemoney/wayfinder-ui.git
