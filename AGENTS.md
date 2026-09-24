@@ -54,6 +54,14 @@ In addition to environment-provided capabilities (e.g., tools, MCPs, Skills), th
 - **Skills** ([`skills/`](skills/)) — Reusable agent capabilities with scripts and instructions
 - **Commands** ([`commands/`](commands/)) — Human invokes via `/command`; AI receives prompt
 
+<skills-section>
+## Skills
+
+The [`skills/`](skills/) directory contains reusable agent skills following the [Agent Skills specification](https://agentskills.io/specification). Skills are distributed to IDE-specific directories via [`.ai-workspace/scripts/transpile-skills.py`](.ai-workspace/scripts/transpile-skills.py).
+
+When creating or modifying skills, read [`skills/README.md`](skills/README.md) first.
+</skills-section>
+
 ## Configuration
 
 This workspace is configured via `ai-workspace.toml` at the repository root. After changing configuration, agent docs, or `AGENTS.project.md`, regenerate workspace files:

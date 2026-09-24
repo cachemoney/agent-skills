@@ -32,6 +32,7 @@ from config import load_config
 SKILLS_DIR = "skills"
 NAME_MAX_LENGTH = 64
 DESCRIPTION_MAX_LENGTH = 1024
+COMPATIBILITY_MAX_LENGTH = 500
 FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 # Pattern for valid skill names: lowercase alphanumeric and hyphens
@@ -45,6 +46,10 @@ class Skill:
     name: str
     description: str
     source_path: Path  # Path to skill directory
+    compatibility: str | None = None
+    license: str | None = None
+    metadata: dict[str, str] | None = None
+    allowed_tools: str | None = None
 
 
 def extract_frontmatter(content: str) -> dict | None:
@@ -100,6 +105,54 @@ def validate_description(description: str) -> list[str]:
     return []
 
 
+def validate_compatibility(compatibility: object) -> list[str]:
+    """Validate optional compatibility field per Agent Skills spec."""
+    if compatibility is None:
+        return []
+    if not isinstance(compatibility, str):
+        return ["'compatibility' must be a string"]
+    if len(compatibility) > COMPATIBILITY_MAX_LENGTH:
+        return [
+            f"'compatibility' exceeds {COMPATIBILITY_MAX_LENGTH} characters (got {len(compatibility)})"
+        ]
+    return []
+
+
+def validate_license(license_val: object) -> list[str]:
+    """Validate optional license field per Agent Skills spec."""
+    if license_val is None:
+        return []
+    if not isinstance(license_val, str):
+        return ["'license' must be a string"]
+    return []
+
+
+def validate_metadata(metadata: object) -> list[str]:
+    """Validate optional metadata field per Agent Skills spec."""
+    if metadata is None:
+        return []
+    if not isinstance(metadata, dict):
+        return ["'metadata' must be a key-value mapping (dictionary)"]
+    errors = []
+    for k, v in metadata.items():
+        if not isinstance(k, str):
+            errors.append(f"'metadata' key '{k}' must be a string")
+        if not isinstance(v, str):
+            errors.append(
+                f"'metadata' value for key '{k}' must be a string (got {type(v).__name__})"
+            )
+    return errors
+
+
+def validate_allowed_tools(allowed_tools: object) -> list[str]:
+    """Validate optional allowed-tools field per Agent Skills spec."""
+    if allowed_tools is None:
+        return []
+    if not isinstance(allowed_tools, str):
+        return ["'allowed-tools' must be a space-separated string"]
+    return []
+
+
 def parse_skill(skill_dir: Path) -> tuple[Skill | None, list[str]]:
     """Parse and validate a skill directory. Returns (Skill, errors)."""
     errors = []
@@ -134,6 +187,22 @@ def parse_skill(skill_dir: Path) -> tuple[Skill | None, list[str]]:
         description = ""
     errors.extend(validate_description(description))
 
+    # Validate optional compatibility field
+    compatibility = frontmatter.get("compatibility")
+    errors.extend(validate_compatibility(compatibility))
+
+    # Validate optional license field
+    license_val = frontmatter.get("license")
+    errors.extend(validate_license(license_val))
+
+    # Validate optional metadata field
+    metadata = frontmatter.get("metadata")
+    errors.extend(validate_metadata(metadata))
+
+    # Validate optional allowed-tools field
+    allowed_tools = frontmatter.get("allowed-tools")
+    errors.extend(validate_allowed_tools(allowed_tools))
+
     # Check for markdown body after frontmatter
     match = FRONTMATTER_PATTERN.match(content)
     if match:
@@ -146,7 +215,18 @@ def parse_skill(skill_dir: Path) -> tuple[Skill | None, list[str]]:
     if errors:
         return None, errors
 
-    return Skill(name=name, description=description, source_path=skill_dir), []
+    return (
+        Skill(
+            name=name,
+            description=description,
+            source_path=skill_dir,
+            compatibility=compatibility if isinstance(compatibility, str) else None,
+            license=license_val if isinstance(license_val, str) else None,
+            metadata=metadata if isinstance(metadata, dict) else None,
+            allowed_tools=allowed_tools if isinstance(allowed_tools, str) else None,
+        ),
+        [],
+    )
 
 
 def find_skills(base_dir: Path) -> list[Path]:

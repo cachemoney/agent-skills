@@ -31,3 +31,15 @@ _Avoid_: Inflight, processing, unhandled
 **Split Ownership**:
 The concurrency model where the agent exclusively mutates `state.json` via atomic patch renames, and the client exclusively appends to `events.jsonl`.
 _Avoid_: Two-way binding, shared state
+
+**Agent Skill**:
+A self-contained capability directory under `skills/<name>` following the Agent Skills specification (`SKILL.md` frontmatter + instructions, optional `scripts/`, `references/`, `assets/`).
+_Avoid_: Plugin, tool, extension, prompt
+
+**Skill Distribution**:
+Symlinking skills from `skills/` to agent-specific directories (`.opencode/skill`, `.claude/skills`, `.cursor/skills`, `.gemini/skills`) via workspace automation.
+_Avoid_: Copying, syncing, installing
+
+**Polyglot Skill**:
+A skill with runtime dependencies declared via `compatibility` frontmatter (e.g., zero-dependency Node.js or `uv run` Python/PEP 723) executed directly without global installation.
+_Avoid_: Monoglot, wrapper script
