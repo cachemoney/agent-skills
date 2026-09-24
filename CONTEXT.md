@@ -5,8 +5,12 @@ Architecture and planning skills for AI agent collaboration across complex codeb
 ## Language
 
 **Destination**:
-The high-level architectural goal or epic boundary defining the scope of a wayfinding effort.
-_Avoid_: Topic, project, goal
+The high-level architectural goal or epic boundary defining the scope of a multi-session wayfinding effort.
+_Avoid_: Project, epic, goal
+
+**Design Topic**:
+The focused subject or technical proposal under cross-examination during an architectural grilling interview.
+_Avoid_: Destination, project, prompt
 
 **Decision Ticket**:
 A discrete architectural fork in the road (`grilling`, `research`, `prototype`, `task`) with options, trade-offs, and dependency edges.

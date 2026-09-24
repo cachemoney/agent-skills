@@ -2,6 +2,8 @@
 
 Reusable agent capabilities following the [Agent Skills specification](https://agentskills.io/specification). Skills are defined here and automatically distributed to tool-specific directories via symlinks.
 
+For instructions on installing these skills across various AI coding assistants (Claude Code, Cursor, Codex, Gemini CLI, etc.), see [`INSTALLATION.md`](../INSTALLATION.md).
+
 ## Creating a skill
 
 ### 1. Create the skill directory and SKILL.md

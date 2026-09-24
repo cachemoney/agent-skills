@@ -178,7 +178,7 @@ try {
 
   // 5. Test Visual Tab
   await page.click("#toggle-visual");
-  assert.equal(await page.getAttribute("#visual-frame", "src"), "/visual");
+  assert.match(await page.getAttribute("#visual-frame", "src"), /^\/visual(\?t=\d+)?$/);
 
   // 6. Test Terms / Glossary Modal
   await page.click("#terms-btn");

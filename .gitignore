@@ -100,3 +100,9 @@ cython_debug/
 .tmp/*
 !/.tmp/.gitkeep
 !/.tmp/README.md
+
+# Node / Playwright
+node_modules/
+test-results/
+playwright-report/
+blob-report/

@@ -89,6 +89,18 @@ uv run <script>                    # Run with project dependencies
 
 For scripts with inline dependencies (PEP 723), run them directly with `uv run script.py` - this lets uv resolve inline deps automatically.
 
+### JavaScript and Browser Testing
+
+While this workspace exclusively uses `uv` for Python packages and workspace tools, polyglot agent skills with browser user interfaces (`wayfinder-ui`, `grill-with-docs-ui`) use Playwright for E2E testing:
+
+```bash
+npm run test:unit       # Fast Node test runner for server daemons (node --test)
+npm run test:e2e        # Playwright browser test suite across all skills
+npm test                # Run both unit and E2E suites
+```
+
+Skills remain zero-dependency runtimes when symlinked to consumer repos; test dependencies and `playwright.config.mjs` live centrally at the workspace root. See `docs/adr/0003-centralized-playwright-e2e-testing-for-polyglot-skills.md`.
+
 ## Agent Resources
 
 ### Agent Docs
