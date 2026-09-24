@@ -1,6 +1,4 @@
-// End-to-end check of wayfinder-ui page.html against a real `serve`. Needs Playwright with Chromium:
-//   PLAYWRIGHT_PKG=/path/to/node_modules/@playwright/test/index.mjs node test/page.e2e.mjs
-// or, with @playwright/test installed next to this repo, just `node test/page.e2e.mjs`.
+// End-to-end check of grill-with-docs-ui page.html against a real `serve`.
 import { spawn, execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,15 +21,14 @@ const serverCandidates = [
   join(here, "..", "server.mjs"),
 ];
 const SERVER = serverCandidates.find((s) => existsSync(s)) || join(here, "..", "scripts", "server.mjs");
-const home = mkdtempSync(join(tmpdir(), "wf-e2e-home-"));
-const env = { ...process.env, WAYFINDER_HOME: home };
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const home = mkdtempSync(join(tmpdir(), "gdu-e2e-home-"));
+const env = { ...process.env, GRILL_WITH_DOCS_UI_HOME: home };
 
 const { session } = JSON.parse(
   execFileSync(
     process.execPath,
-    [SERVER, "new", "--destination", "E2E Distributed Storage", "--doc", "docs/e2e-roadmap.md"],
-    { encoding: "utf8", env, cwd: mkdtempSync(join(tmpdir(), "wf-e2e-proj-")) }
+    [SERVER, "new", "--topic", "E2E Distributed Architecture", "--doc", "docs/e2e-design.md"],
+    { encoding: "utf8", env, cwd: mkdtempSync(join(tmpdir(), "gdu-e2e-proj-")) }
   )
 );
 const stateFile = join(session, "state.json");
@@ -40,46 +37,51 @@ const now = new Date().toISOString();
 
 const fixture = () => ({
   ...base,
-  destination: "E2E Distributed Storage",
+  topic: "E2E Distributed Architecture",
   agent: { status: "waiting", since: now, handled: 0 },
-  terms: [{ term: "Frontier", def: "Unblocked actionable tickets.", avoid: ["backlog"] }],
+  terms: [{ term: "LogEntry", def: "An immutable command in the consensus log.", avoid: ["record"] }],
+  adrs: ["docs/adr/0001-storage-engine.md"],
   tickets: [
     {
       id: "t1",
       title: "Storage Engine Selection",
       type: "grilling",
       status: "resolved",
+      durable: true,
+      adr_file: "docs/adr/0001-storage-engine.md",
       blocked_by: [],
       blocks: ["t2", "t3"],
-      question: "Which storage engine fits our scale?",
+      question: "Which storage engine meets scale?",
       options: [
         { k: "A", text: "LSM Tree (RocksDB)" },
         { k: "B", text: "B-Tree (SQLite)" },
       ],
-      rec: { option: "A", why: "LSM optimizes for heavy write throughput." },
+      rec: { option: "A", why: "Optimizes for heavy append throughput." },
       answer: { summary: "Adopted RocksDB", option: "A" },
-      thread: [{ who: "user", text: "Why not B?", at: now }, { who: "agent", text: "B cannot sustain writes.", at: now }],
+      thread: [{ who: "user", text: "Why not B?", at: now }, { who: "agent", text: "B cannot sustain write volume.", at: now }],
     },
     {
       id: "t2",
       title: "Replication Protocol",
       type: "grilling",
       status: "frontier",
+      durable: true,
       blocked_by: ["t1"],
       blocks: [],
-      question: "Choose replication model",
+      question: "Choose consensus algorithm",
       options: [
         { k: "A", text: "Raft consensus" },
-        { k: "B", text: "Primary-backup" },
+        { k: "B", text: "Multi-Paxos" },
       ],
-      rec: { option: "A", why: "Raft guarantees strong consistency across partitions." },
+      rec: { option: "A", why: "Clear leader lease model." },
       thread: [],
     },
     {
       id: "t3",
-      title: "Benchmarking IOPS",
+      title: "Network IOPS Validation",
       type: "research",
       status: "frontier",
+      durable: false,
       blocked_by: ["t1"],
       blocks: [],
       question: "Validate throughput against NVMe disks",
@@ -88,7 +90,7 @@ const fixture = () => ({
       thread: [],
     },
   ],
-  fog: [{ id: "fog-1", notes: "Network partition healing strategy" }],
+  fog: [{ id: "fog-1", notes: "Split-brain resolution protocol" }],
   visual: {
     kind: "diagram",
     version: 1,
@@ -149,15 +151,17 @@ const page = await browser.newPage();
 try {
   await page.goto(ready.url);
 
-  // 1. Title and Frontier check
-  assert.equal(await page.textContent("#dest-display"), "E2E Distributed Storage");
+  // 1. Topic and Counters check
+  assert.equal(await page.textContent("#dest-display"), "E2E Distributed Architecture");
   assert.equal(await page.textContent("#frontier-count"), "2");
   assert.equal(await page.textContent("#resolved-count"), "1");
   assert.equal(await page.textContent("#fog-count"), "1");
+  assert.equal(await page.textContent("#terms-count"), "1");
+  assert.equal(await page.textContent("#adrs-count"), "3"); // t1 durable, t2 durable, state.adrs[0]
 
   // 2. SVG DAG Render check
   const nodes = await page.$$("g");
-  assert.ok(nodes.length >= 3, "SVG contains rendered ticket nodes");
+  assert.ok(nodes.length >= 3, "SVG contains rendered decision nodes");
 
   // 3. Switch to Card View and verify Decision Card
   await page.click("#toggle-card");
@@ -176,18 +180,23 @@ try {
   await page.click("#toggle-visual");
   assert.equal(await page.getAttribute("#visual-frame", "src"), "/visual");
 
-  // 6. Test Terms Modal
+  // 6. Test Terms / Glossary Modal
   await page.click("#terms-btn");
-  assert.ok((await page.textContent("#terms-list")).includes("Frontier"));
+  assert.ok((await page.textContent("#terms-list")).includes("LogEntry"));
   await page.click("#terms-modal button:has-text('Close')");
 
-  // 7. Test Finish Modal
+  // 7. Test ADRs Modal
+  await page.click("#adrs-btn");
+  assert.ok((await page.textContent("#adrs-list")).includes("Storage Engine Selection"));
+  await page.click("#adrs-modal button:has-text('Close')");
+
+  // 8. Test Finish Modal
   await page.click("#finish-btn");
   assert.ok(await page.isVisible("#finish-modal"));
   assert.equal(await page.textContent("#finish-frontier-count"), "2");
   await page.click("#finish-modal button:has-text('Cancel')");
 
-  console.log("All wayfinder-ui E2E browser checks passed successfully!");
+  console.log("All grill-with-docs-ui E2E browser checks passed successfully!");
 } finally {
   await page.close();
   await browser.close();
