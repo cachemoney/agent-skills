@@ -237,7 +237,9 @@
     </button>
   </div>
 
-  <div class="header-actions">
+    <button id="notes-btn" class="hdr-btn" onclick="openNotesModal()">
+      Notes
+    </button>
     <button id="terms-btn" class="hdr-btn" onclick="openTermsModal()">
       Terms (<span id="terms-count">0</span>)
     </button>
@@ -254,7 +256,10 @@
 
 <nav>
   <div class="nav-sec">
-    <div class="nav-hdr">Frontier (Actionable) <span id="frontier-count">0</span></div>
+    <div class="nav-hdr">
+      <span>Frontier (Actionable) <span id="frontier-count">0</span></span>
+      <button class="nav-btn-grad" id="new-ticket-btn" onclick="openNewTicketModal()">+ New</button>
+    </div>
     <div id="frontier-list"></div>
   </div>
   <div class="nav-sec">
@@ -282,11 +287,24 @@
     <!-- Ticket Card Mode -->
     <div class="ticket-card" id="active-card">
       <div class="card-top">
-        <span class="card-id" id="c-id">Select a ticket</span>
-        <span class="badge-type" id="c-type"></span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="card-id" id="c-id">Select a ticket</span>
+          <span class="badge-type" id="c-type"></span>
+          <span class="badge-pill" id="c-assignee" style="display:none; background:#e8edf5; color:#2b5278;"></span>
+        </div>
       </div>
       <h2 class="card-h2" id="c-title">No ticket selected</h2>
       <div class="card-q" id="c-q">Select a ticket from the left panel or click a node on the map.</div>
+
+      <!-- Locked Answer Box for Resolved Tickets -->
+      <div class="rec-box" id="c-answer-box" style="display:none; border-left-color:var(--ok); background:var(--ok-soft);">
+        <div class="rec-hdr" id="c-ans-hdr" style="color:var(--ok);">Locked Decision</div>
+        <div id="c-ans-summary" style="font-weight:600; font-size:14px; margin-bottom:4px; color:var(--ink);"></div>
+        <div id="c-ans-opt" style="font-size:12px; color:var(--ink-2); margin-bottom:2px;"></div>
+        <div id="c-ans-date" style="font-size:11px; color:var(--ink-3); margin-bottom:6px;"></div>
+        <a id="c-ans-asset" style="display:none; font-size:12px; font-weight:600;" target="_blank"></a>
+      </div>
+
       <div class="rec-box" id="c-rec-box" style="display:none;">
         <div class="rec-hdr">Recommended Decision</div>
         <div id="c-rec"></div>
@@ -438,6 +456,60 @@
     </div>
   </div>
 </div>
+
+<!-- Notes Reference Modal -->
+<div class="modal-overlay" id="notes-modal">
+  <div class="modal-box">
+    <h3>Map Notes & Context</h3>
+    <p style="color:var(--ink-2); font-size:13px; margin-bottom:14px;">
+      Domain context, standing preferences, and skills to consult for this effort.
+    </p>
+    <div id="notes-body" style="background:#fdfaf5; border:1px solid var(--rule); border-radius:6px; padding:14px; font-size:13px; line-height:1.6; white-space:pre-wrap;"></div>
+    <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+      <button class="btn" onclick="closeNotesModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Ticket Modal -->
+<div class="modal-overlay" id="new-ticket-modal">
+  <div class="modal-box">
+    <h3>Create New Decision Ticket</h3>
+    <p style="color:var(--ink-2); font-size:13px; margin-bottom:14px;">
+      Add an actionable decision ticket to the map frontier DAG.
+    </p>
+    <div class="modal-row">
+      <label>Ticket ID</label>
+      <input type="text" id="new-t-id" placeholder="e.g. t4" />
+    </div>
+    <div class="modal-row">
+      <label>Ticket Title</label>
+      <input type="text" id="new-t-title" placeholder="e.g. Partition key schema strategy" />
+    </div>
+    <div class="modal-row">
+      <label>Ticket Type</label>
+      <select id="new-t-type">
+        <option value="grilling">Grilling (Human Decision Interview)</option>
+        <option value="research">Research (Autonomous Subagent AFK)</option>
+        <option value="prototype">Prototype (UI / Code Spike)</option>
+        <option value="task">Task (Deterministic Implementation)</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <label>Prerequisites (Blocked By Tickets)</label>
+      <div id="new-blockers-list" style="max-height:120px; overflow-y:auto; border:1px solid var(--rule); border-radius:4px; padding:6px 10px; background:var(--panel);"></div>
+    </div>
+    <div class="modal-row">
+      <label>Core Question / Specification</label>
+      <textarea id="new-t-question" style="height:60px;" placeholder="What decision needs to be answered?"></textarea>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+      <button class="btn" onclick="closeNewTicketModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewTicket()">Stage New Ticket</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 let state = null;
@@ -742,10 +814,50 @@ function renderCard() {
   badge.textContent = t.type || 'grilling';
   badge.className = `badge-type badge-${t.type || 'grilling'}`;
 
+  const assigneeBadge = document.getElementById('c-assignee');
+  if (t.assignee) {
+    assigneeBadge.style.display = 'inline-block';
+    assigneeBadge.textContent = `Claimed: ${t.assignee}`;
+  } else {
+    assigneeBadge.style.display = 'none';
+  }
+
   document.getElementById('c-title').textContent = t.title;
   document.getElementById('c-q').textContent = t.question || 'No question specified.';
 
+  const ansBox = document.getElementById('c-answer-box');
   const recBox = document.getElementById('c-rec-box');
+  const opts = document.getElementById('c-opts');
+  const customBox = document.getElementById('c-custom-box');
+  const actions = document.getElementById('c-actions');
+
+  if (t.status === 'resolved' && t.answer) {
+    ansBox.style.display = 'block';
+    document.getElementById('c-ans-hdr').textContent = `Locked Decision (${t.answer.resolved_at ? new Date(t.answer.resolved_at).toLocaleDateString() : 'Resolved'})`;
+    document.getElementById('c-ans-summary').textContent = t.answer.summary || t.answer.text || 'Decision committed.';
+    document.getElementById('c-ans-opt').textContent = t.answer.option ? `Option Selected: ${t.answer.option}` : '';
+    document.getElementById('c-ans-date').textContent = t.answer.resolved_at ? `Resolved at ${new Date(t.answer.resolved_at).toLocaleString()}` : '';
+    const assetEl = document.getElementById('c-ans-asset');
+    if (t.answer.asset_url) {
+      assetEl.style.display = 'inline-block';
+      assetEl.href = t.answer.asset_url;
+      assetEl.textContent = `📄 View Asset (${t.answer.asset_url})`;
+    } else {
+      assetEl.style.display = 'none';
+    }
+
+    recBox.style.display = 'none';
+    opts.style.display = 'none';
+    customBox.style.display = 'none';
+    actions.innerHTML = `
+      <div style="font-size:12px; color:var(--ok); font-weight:600; padding:6px 0;">✓ Decision Resolved and Locked</div>
+    `;
+    return;
+  }
+
+  ansBox.style.display = 'none';
+  opts.style.display = 'grid';
+
   if (t.rec) {
     recBox.style.display = 'block';
     document.getElementById('c-rec').textContent = t.rec.why ? `${t.rec.option ? t.rec.option + ': ' : ''}${t.rec.why}` : JSON.stringify(t.rec);
@@ -753,7 +865,6 @@ function renderCard() {
     recBox.style.display = 'none';
   }
 
-  const opts = document.getElementById('c-opts');
   opts.innerHTML = (t.options || []).map(o => `
     <li class="opt-item ${t.rec && t.rec.option === o.k ? 'rec' : ''}" onclick="stageAnswer('${t.id}', '${o.k}', '${escapeHtml(o.text)}')">
       <span class="opt-k">${o.k}</span>
@@ -761,16 +872,19 @@ function renderCard() {
     </li>
   `).join('');
 
-  document.getElementById('c-custom-box').style.display = 'block';
+  customBox.style.display = 'block';
 
   // Restore draft custom answer if present
   const draftAns = (local.drafts[activeTicketId] && local.drafts[activeTicketId].answer) || '';
   document.getElementById('custom-answer-text').value = draftAns;
 
-  const actions = document.getElementById('c-actions');
+  const claimBtn = t.assignee
+    ? `<button class="btn" disabled style="opacity:0.6;">Claimed (${escapeHtml(t.assignee)})</button>`
+    : `<button class="btn" onclick="stageAction({ type: 'claim_ticket', ticket_id: '${t.id}' })">Claim Ticket</button>`;
+
   actions.innerHTML = `
     ${t.rec ? `<button class="btn btn-primary" onclick="stageAnswer('${t.id}', '${t.rec.option || 'REC'}', 'Accept Recommendation')">Accept Recommendation</button>` : ''}
-    <button class="btn" onclick="stageAction({ type: 'claim_ticket', ticket_id: '${t.id}' })">Claim Ticket</button>
+    ${claimBtn}
     ${t.type === 'research' ? `<button class="btn" onclick="stageAction({ type: 'trigger_research', ticket_id: '${t.id}' })">Trigger Research</button>` : ''}
     <button class="btn" onclick="stageAction({ type: 'rule_out_of_scope', ticket_id: '${t.id}' })">Rule Out of Scope</button>
   `;
@@ -932,7 +1046,8 @@ function renderDAG() {
   const svg = document.getElementById('dag-view');
   if (!state || !svg || local.activeView !== 'dag') return;
   const tickets = state.tickets || [];
-  if (tickets.length === 0) {
+  const fog = state.fog || [];
+  if (tickets.length === 0 && fog.length === 0) {
     svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9a9285">No decision tickets charted yet.</text>';
     return;
   }
@@ -987,7 +1102,7 @@ function renderDAG() {
     });
   });
 
-  // Render nodes
+  // Render ticket nodes
   tickets.forEach(t => {
     const p = positions.get(t.id);
     if (!p) return;
@@ -996,21 +1111,99 @@ function renderDAG() {
     const isSelected = t.id === activeTicketId;
     const stroke = isSelected ? 'var(--accent)' : isFrontier ? 'var(--stage)' : isResolved ? 'var(--ok)' : 'var(--rule)';
     const fill = isSelected ? '#fffdfa' : '#ffffff';
+    const assigneeSuffix = t.assignee ? ` · ${t.assignee}` : '';
 
     html += `
-      <g transform="translate(${p.x},${p.y})" style="cursor:pointer;" onclick="selectTicket('${t.id}'); setView('card');">
+      <g class="ticket-node" transform="translate(${p.x},${p.y})" style="cursor:pointer;" onclick="selectTicket('${t.id}'); setView('card');">
         <rect width="${nodeW}" height="${nodeH}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="${isSelected || isFrontier ? 2 : 1}" />
-        <text x="12" y="22" font-size="10" font-weight="700" fill="var(--ink-3)">#${t.id} · ${(t.type || 'G').toUpperCase()}</text>
+        <text x="12" y="22" font-size="10" font-weight="700" fill="var(--ink-3)">#${t.id} · ${(t.type || 'G').toUpperCase()}${escapeHtml(assigneeSuffix)}</text>
         <text x="12" y="42" font-size="12" font-weight="600" fill="var(--ink)" width="156">${escapeHtml(t.title.slice(0, 24))}${t.title.length > 24 ? '…' : ''}</text>
         <text x="12" y="58" font-size="10" fill="${isResolved ? 'var(--ok)' : isFrontier ? 'var(--stage)' : 'var(--ink-3)'}">${t.status.toUpperCase()}</text>
       </g>
     `;
   });
 
+  // Render Fog of War nodes
+  if (fog.length > 0) {
+    const fogColX = 50 + (maxRank + 1) * (nodeW + gapX);
+    fog.forEach((f, fIdx) => {
+      const y = 50 + fIdx * (nodeH + gapY);
+      html += `
+        <g class="fog-node" transform="translate(${fogColX},${y})" style="cursor:pointer;" onclick="selectFog('${f.id}');">
+          <rect width="${nodeW}" height="${nodeH}" rx="8" fill="#f8fafc" stroke="var(--fog)" stroke-width="1.5" stroke-dasharray="5,4" />
+          <text x="12" y="22" font-size="10" font-weight="700" fill="var(--fog)">☁ FOG · #${f.id}</text>
+          <text x="12" y="42" font-size="12" font-weight="600" fill="var(--ink)">${escapeHtml((f.title || f.notes || '').slice(0, 20))}${(f.title || f.notes || '').length > 20 ? '…' : ''}</text>
+          <text x="12" y="58" font-size="10" fill="var(--fog)">CLICK TO GRADUATE</text>
+        </g>
+      `;
+    });
+  }
+
   svg.innerHTML = html;
 }
 
 // Modals Handling
+function openNotesModal() {
+  if (!state) return;
+  const notes = state.notes || 'No notes recorded for this map.';
+  document.getElementById('notes-body').textContent = notes;
+  document.getElementById('notes-modal').style.display = 'flex';
+}
+
+function closeNotesModal() {
+  document.getElementById('notes-modal').style.display = 'none';
+}
+
+function openNewTicketModal() {
+  if (!state) return;
+  const nextId = 't' + ((state.tickets || []).length + 1);
+  document.getElementById('new-t-id').value = nextId;
+  document.getElementById('new-t-title').value = '';
+  document.getElementById('new-t-question').value = '';
+  document.getElementById('new-t-type').value = 'grilling';
+
+  const container = document.getElementById('new-blockers-list');
+  container.innerHTML = (state.tickets || []).map(t => `
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:4px; cursor:pointer;">
+      <input type="checkbox" value="${t.id}" class="new-blocker-cb" />
+      <span>#${t.id} - ${escapeHtml(t.title)}</span>
+    </label>
+  `).join('');
+
+  document.getElementById('new-ticket-modal').style.display = 'flex';
+}
+
+function closeNewTicketModal() {
+  document.getElementById('new-ticket-modal').style.display = 'none';
+}
+
+function submitNewTicket() {
+  const id = document.getElementById('new-t-id').value.trim();
+  const title = document.getElementById('new-t-title').value.trim();
+  const type = document.getElementById('new-t-type').value;
+  const question = document.getElementById('new-t-question').value.trim();
+  const cbs = document.querySelectorAll('.new-blocker-cb:checked');
+  const blocked_by = Array.from(cbs).map(cb => cb.value);
+
+  if (!id || !title) {
+    alert('Ticket ID and Title are required.');
+    return;
+  }
+
+  stageAction({
+    type: 'create_ticket',
+    ticket: {
+      id,
+      title,
+      type,
+      blocked_by,
+      question
+    }
+  });
+
+  closeNewTicketModal();
+}
+
 function openFinishModal() {
   if (!state) return;
   const tickets = state.tickets || [];
@@ -1086,6 +1279,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeFinishModal();
     closeTermsModal();
+    closeNotesModal();
+    closeNewTicketModal();
   }
 });
 

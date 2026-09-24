@@ -114,6 +114,7 @@ When a line arrives with `"type":"send"`, it contains an array of `actions` stag
 1. Immediately patch `{ "agent": { "status": "working" } }`.
 2. Process the `actions` in order:
    - `claim_ticket` $\rightarrow$ Set ticket's `assignee` to dev or agent.
+   - `create_ticket` $\rightarrow$ Create a new ticket entry in `tickets` with the specified dependencies and question.
    - `answer_ticket` $\rightarrow$ Set ticket's `status: "resolved"`, record `answer: { summary, option, text }`. Downstream blocked tickets automatically promote to `frontier`!
    - `thread_message` $\rightarrow$ Append `{ who: "user", text, at }` to ticket's `thread`, followed by your reply `{ who: "agent", text }`.
    - `graduate_fog` $\rightarrow$ Remove the item from `fog` and create a new ticket entry in `tickets` with the specified dependencies.
@@ -157,6 +158,20 @@ When the user triggers `finish_map` (or all frontier tickets are resolved and fo
 2. Patch `"finished": { "doc": "<path>", "at": "ISO" }` and `"agent": { "status": "waiting" }`.
 3. Stop the server daemon.
 4. Print the generated roadmap document path and conclude.
+
+---
+
+## Remote Issue Tracker Synchronization (Optional)
+
+If `--tracker github` is configured, you can mirror the local session map and tickets to remote GitHub issues at any point:
+
+```sh
+# Dry run to preview issue creation plan
+node $SKILL/scripts/server.mjs sync --session <session> --dry-run
+
+# Execute sync using gh CLI
+node $SKILL/scripts/server.mjs sync --session <session>
+```
 
 ---
 

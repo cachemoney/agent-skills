@@ -438,3 +438,22 @@ test("wait: blocks until new send newer than --after, timeout exits 3", async (t
   const tcode = await new Promise((res) => timeoutWaiter.on("exit", res));
   assert.equal(tcode, 3);
 });
+
+test("sync: reports local tracker status and handles dry-run plan", async () => {
+  const { session } = newSession(tmp("wf-sync-"));
+  const outLocal = JSON.parse(run(["sync", "--session", session]));
+  assert.equal(outLocal.ok, true);
+  assert.equal(outLocal.tracker, "local");
+  assert.equal(outLocal.synced, 0);
+
+  // Set tracker to github
+  const patch = { tracker: { type: "github" }, destination: "Test Epic" };
+  run(["patch", "--session", session], { input: JSON.stringify(patch) });
+  const outGh = JSON.parse(run(["sync", "--session", session, "--dry-run"]));
+  assert.equal(outGh.ok, true);
+  assert.equal(outGh.tracker, "github");
+  assert.equal(outGh.dryRun, true);
+  assert.ok(outGh.plan.length >= 1);
+  assert.equal(outGh.plan[0].action, "create_map_issue");
+});
+

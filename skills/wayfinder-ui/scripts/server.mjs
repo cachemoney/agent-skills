@@ -9,6 +9,7 @@
 //   wait          --session DIR [--after N] [--timeout S]
 //   url           --session DIR [--timeout S]
 //   patch         --session DIR [--file P]
+//   sync          --session DIR [--dry-run]
 //
 // Files per session:
 //   state.json    — written only by the agent, through `patch`
@@ -649,6 +650,75 @@ function cmdPatch(o) {
   });
 }
 
+function cmdSync(o) {
+  const session = mustSession(o);
+  const st = readState(session);
+  if (!st) die(`cannot read state.json from ${session}`);
+
+  const tracker = st.tracker || { type: "local" };
+  const dryRun = Boolean(o["dry-run"]);
+  const tickets = Array.isArray(st.tickets) ? st.tickets : [];
+
+  if (tracker.type !== "github") {
+    print({
+      ok: true,
+      tracker: tracker.type,
+      message: `Tracker is "${tracker.type}". Remote issue synchronization only applies to tracker type "github".`,
+      synced: 0,
+      dryRun,
+    });
+    return;
+  }
+
+  // Check if gh CLI is available
+  try {
+    execFileSync("gh", ["--version"], { stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    die("gh CLI is not installed or not available on PATH for GitHub issue synchronization", 1);
+  }
+
+  const syncPlan = [];
+  if (!tracker.map_id) {
+    syncPlan.push({
+      action: "create_map_issue",
+      title: `[Wayfinder Map] ${st.destination || "Untitled Epic"}`,
+      body: `## Destination\n\n${st.destination || ""}\n\n## Notes\n\n${st.notes || ""}\n`,
+      labels: ["wayfinder:map"],
+    });
+  }
+
+  for (const t of tickets) {
+    if (!t.issue_id) {
+      syncPlan.push({
+        action: "create_child_issue",
+        ticket_id: t.id,
+        title: t.title,
+        body: `## Question\n\n${t.question || ""}\n`,
+        labels: [`wayfinder:${t.type || "grilling"}`],
+      });
+    }
+  }
+
+  if (dryRun) {
+    print({ ok: true, tracker: "github", dryRun: true, plan: syncPlan, count: syncPlan.length });
+    return;
+  }
+
+  const executed = [];
+  for (const item of syncPlan) {
+    try {
+      const args = ["issue", "create", "--title", item.title, "--body", item.body];
+      for (const l of item.labels || []) args.push("--label", l);
+      const output = execFileSync("gh", args, { cwd: st.project || process.cwd(), encoding: "utf8" }).trim();
+      executed.push({ item, url: output });
+    } catch (e) {
+      die(`gh issue create failed: ${e.message}`, 1);
+    }
+  }
+
+  print({ ok: true, tracker: "github", synced: executed.length, executed });
+}
+
 const o = parseArgs(process.argv.slice(2));
 const cmds = {
   new: cmdNew,
@@ -658,10 +728,11 @@ const cmds = {
   wait: cmdWait,
   url: cmdUrl,
   patch: cmdPatch,
+  sync: cmdSync,
 };
 
 if (Object.hasOwn(cmds, o._[0] ?? "")) {
   cmds[o._[0]](o);
 } else {
-  die("usage: server.mjs new|serve|sessions|pending|wait|url|patch [--session DIR] ...");
+  die("usage: server.mjs new|serve|sessions|pending|wait|url|patch|sync [--session DIR] ...");
 }

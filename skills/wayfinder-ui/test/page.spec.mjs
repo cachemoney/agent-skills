@@ -86,8 +86,19 @@ test.describe("wayfinder-ui frontend", () => {
 
   test("renders topological SVG DAG nodes", async ({ page, server }) => {
     await page.goto(server.url);
-    const nodes = page.locator("#dag-view g");
+    const nodes = page.locator("#dag-view g.ticket-node");
     await expect(nodes).toHaveCount(3);
+    const fogNodes = page.locator("#dag-view g.fog-node");
+    await expect(fogNodes).toHaveCount(1);
+  });
+
+  test("displays locked answer when viewing resolved ticket", async ({ page, server }) => {
+    await page.goto(server.url);
+    await page.click("#toggle-card");
+    await page.locator(".nav-item", { hasText: "Storage Engine Selection" }).click();
+    await expect(page.locator("#c-answer-box")).toBeVisible();
+    await expect(page.locator("#c-ans-summary")).toContainText("Adopted RocksDB");
+    await expect(page.locator("#c-custom-box")).toBeHidden();
   });
 
   test("switches to Decision Card view", async ({ page, server }) => {
@@ -122,6 +133,25 @@ test.describe("wayfinder-ui frontend", () => {
     await expect(page.locator("#terms-list")).toContainText("Frontier");
     await page.locator("#terms-modal button", { hasText: "Close" }).click();
     await expect(page.locator("#terms-modal")).toBeHidden();
+  });
+
+  test("opens and closes map notes modal", async ({ page, server }) => {
+    await page.goto(server.url);
+    await page.click("#notes-btn");
+    await expect(page.locator("#notes-modal")).toBeVisible();
+    await page.locator("#notes-modal button", { hasText: "Close" }).click();
+    await expect(page.locator("#notes-modal")).toBeHidden();
+  });
+
+  test("opens new ticket modal and stages ticket creation", async ({ page, server }) => {
+    await page.goto(server.url);
+    await page.click("#new-ticket-btn");
+    await expect(page.locator("#new-ticket-modal")).toBeVisible();
+    await page.fill("#new-t-title", "Cache Invalidation");
+    await page.fill("#new-t-question", "TTL vs event-driven invalidation?");
+    await page.click("#new-ticket-modal button:has-text('Stage New Ticket')");
+    await expect(page.locator("#new-ticket-modal")).toBeHidden();
+    await expect(page.locator("#staged-count")).toHaveText("1");
   });
 
   test("opens and validates finish map confirmation modal", async ({ page, server }) => {
