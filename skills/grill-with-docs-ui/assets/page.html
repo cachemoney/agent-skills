@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grill with Docs</title>
+<style>
+  :root {
+    --bg: #f7f4ee; --panel: #ffffff; --ink: #1f1c18; --ink-2: #625b51; --ink-3: #9a9285;
+    --rule: #e6e0d4; --accent: #9a3a26; --ok: #3d6b4a; --ok-soft: #e3eee5;
+    --stage: #b8791f; --stage-soft: #f8ecd2; --warn-soft: #fbe9e4;
+    --blocked: #80766a; --blocked-soft: #ede8e1;
+    --fog: #4a637d; --fog-soft: #e8eef5;
+    --adr: #6b3ba6; --adr-soft: #f3ebfa;
+    --type-grill: #b05a2b; --type-research: #2b6cb0; --type-proto: #743cb0; --type-task: #2d8a6e;
+    --serif: "Iowan Old Style", Charter, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: var(--sans); font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--bg);
+    display: grid; grid-template-rows: auto 1fr; grid-template-columns: 280px 1fr 380px; height: 100vh; overflow: hidden;
+  }
+  a { color: var(--accent); cursor: pointer; text-decoration: none; }
+
+  /* Header */
+  header {
+    grid-row: 1; grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;
+    padding: 10px 20px; border-bottom: 1px solid var(--rule); background: var(--panel); position: relative; z-index: 10;
+  }
+  header h1 { font-family: var(--serif); font-weight: 500; font-size: 20px; margin: 0; display: flex; align-items: center; gap: 10px; }
+  header .dest { color: var(--ink-2); font-size: 13px; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--sans); }
+  .view-toggles { display: flex; gap: 4px; margin-left: 8px; background: var(--bg); padding: 3px; border-radius: 6px; border: 1px solid var(--rule); }
+  .view-toggles button { background: none; border: none; padding: 4px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; color: var(--ink-2); font-weight: 500; }
+  .view-toggles button.active { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .badge-pill { font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; margin-left: 4px; background: var(--fog-soft); color: var(--fog); }
+  .badge-pill.stale { background: var(--warn-soft); color: var(--accent); }
+
+  .header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .hdr-btn {
+    background: var(--panel); border: 1px solid var(--rule); padding: 5px 11px; font-size: 12px;
+    border-radius: 5px; cursor: pointer; font-weight: 500; color: var(--ink-2); display: flex; align-items: center; gap: 5px;
+  }
+  .hdr-btn:hover { background: var(--bg); color: var(--ink); }
+  .hdr-btn.finish-ready {
+    background: var(--ok-soft); border-color: var(--ok); color: var(--ok); font-weight: 600;
+    animation: ready-pulse 2s infinite ease-in-out;
+  }
+  @keyframes ready-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(61,107,74,0.3); } 50% { box-shadow: 0 0 0 4px rgba(61,107,74,0.15); } }
+
+  .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); border-left: 1px solid var(--rule); padding-left: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .dot.working { background: var(--stage); animation: pulse 1.2s ease-in-out infinite; }
+  .dot.gone { background: #b03020; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Left Sidebar Navigation */
+  nav {
+    grid-row: 2; grid-column: 1; border-right: 1px solid var(--rule); overflow-y: auto;
+    padding: 14px 0 24px; background: var(--panel);
+  }
+  .nav-sec { margin-bottom: 18px; }
+  .nav-hdr {
+    padding: 5px 16px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; display: flex; justify-content: space-between; align-items: center;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 16px; cursor: pointer;
+    font-size: 13px; border-left: 3px solid transparent; transition: background 0.1s;
+  }
+  .nav-item:hover { background: #f9f8f4; }
+  .nav-item.active { background: #f4efe6; border-left-color: var(--accent); font-weight: 600; }
+  .badge-type {
+    font-size: 9px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;
+    padding: 1px 5px; border-radius: 3px; color: #fff; flex-shrink: 0;
+  }
+  .badge-grilling { background: var(--type-grill); }
+  .badge-research { background: var(--type-research); }
+  .badge-prototype { background: var(--type-proto); }
+  .badge-task { background: var(--type-task); }
+  .badge-fog { background: var(--fog); }
+  .badge-adr-nav {
+    font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;
+    background: var(--adr-soft); color: var(--adr); border: 1px solid #d4bee8;
+  }
+  .nav-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .nav-btn-grad {
+    font-size: 11px; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 3px;
+    background: var(--panel); color: var(--fog); cursor: pointer;
+  }
+  .nav-btn-grad:hover { background: var(--fog-soft); }
+
+  /* Center Main Viewport */
+  main {
+    grid-row: 2; grid-column: 2; overflow-y: auto; position: relative; background: var(--bg);
+  }
+  #dag-view { width: 100%; height: 100%; min-height: 600px; display: block; }
+  #card-view { max-width: 720px; margin: 28px auto; padding: 0 20px; display: none; }
+  #visual-view { width: 100%; height: 100%; display: none; flex-direction: column; }
+
+  body.show-card #dag-view { display: none; }
+  body.show-card #card-view { display: block; }
+  body.show-card #visual-view { display: none; }
+
+  body.show-visual #dag-view { display: none; }
+  body.show-visual #card-view { display: none; }
+  body.show-visual #visual-view { display: flex; }
+
+  .ticket-card {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 24px 28px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); margin-bottom: 24px;
+  }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+  .card-top-left { display: flex; align-items: center; gap: 8px; }
+  .card-id { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+  .card-adr-badge {
+    background: var(--adr-soft); color: var(--adr); border: 1px solid #d4bee8;
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .card-h2 { font-family: var(--serif); font-size: 24px; font-weight: 500; margin: 0 0 14px; line-height: 1.25; }
+  .card-q { font-size: 14px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.6; }
+  .options-list { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 8px; }
+  .opt-item {
+    border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px;
+    display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; cursor: pointer; background: var(--panel);
+  }
+  .opt-item:hover { border-color: var(--ink-3); }
+  .opt-item.rec { border-color: var(--accent); }
+  .opt-item.selected { background: var(--ok-soft); border-color: var(--ok); }
+  .opt-k { font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--ink-3); }
+  .opt-item.rec .opt-k { color: var(--accent); }
+  .opt-item.selected .opt-k { color: var(--ok); }
+
+  .rec-box {
+    background: #fdfaf5; border: 1px solid var(--stage-soft); border-left: 3px solid var(--stage);
+    padding: 10px 14px; border-radius: 4px; margin-bottom: 20px; font-size: 13px;
+  }
+  .rec-hdr { font-weight: 600; color: var(--stage); margin-bottom: 3px; font-size: 11px; text-transform: uppercase; }
+
+  /* Explore Table */
+  .explore-table-box {
+    background: #fdfdfd; border: 1px solid var(--rule); border-radius: 6px;
+    padding: 12px; margin-bottom: 20px; font-size: 12px;
+  }
+  .explore-hdr { font-weight: 600; color: var(--type-research); margin-bottom: 8px; text-transform: uppercase; font-size: 11px; }
+  .explore-table { width: 100%; border-collapse: collapse; }
+  .explore-table th, .explore-table td { border: 1px solid var(--rule); padding: 8px 10px; vertical-align: top; text-align: left; }
+  .explore-table th { background: var(--bg); font-weight: 600; }
+  .pros-list, .cons-list { margin: 0; padding-left: 16px; }
+  .pros-list li { color: var(--ok); }
+  .cons-list li { color: var(--accent); }
+
+  .custom-answer-box { margin-bottom: 20px; }
+  .custom-answer-box textarea {
+    width: 100%; height: 60px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 5px;
+    font-family: var(--sans); font-size: 13px; resize: vertical; margin-bottom: 6px;
+  }
+
+  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  button.btn {
+    padding: 6px 12px; font-size: 13px; font-weight: 500; border-radius: 5px;
+    border: 1px solid var(--rule); background: var(--panel); cursor: pointer; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  button.btn:hover { background: #f9f8f4; border-color: var(--ink-3); }
+  button.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.btn-primary:hover { opacity: 0.9; }
+  button.btn-adr { background: var(--adr-soft); color: var(--adr); border-color: #d4bee8; }
+  button.btn-adr:hover { background: #ebdcf7; }
+
+  /* Visual View Container */
+  .visual-toolbar {
+    padding: 8px 18px; background: var(--panel); border-bottom: 1px solid var(--rule);
+    display: flex; align-items: center; gap: 12px; font-size: 13px;
+  }
+  .stale-banner {
+    background: var(--warn-soft); color: var(--accent); padding: 6px 18px; font-size: 12px;
+    font-weight: 500; border-bottom: 1px solid #f2cfc7; display: flex; align-items: center; justify-content: space-between;
+  }
+  .visual-frame-wrapper { flex: 1; position: relative; background: #ffffff; }
+  .visual-frame-wrapper iframe { width: 100%; height: 100%; border: none; }
+  .visual-placeholder {
+    height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--ink-3); gap: 12px; padding: 40px; text-align: center;
+  }
+
+  /* Right Column: Discussion & Staging */
+  aside {
+    grid-row: 2; grid-column: 3; border-left: 1px solid var(--rule); background: var(--panel);
+    display: grid; grid-template-rows: 1fr auto; height: 100%; overflow: hidden;
+  }
+  .thread-panel { display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid var(--rule); }
+  .panel-hdr { padding: 10px 16px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--rule); background: var(--bg); display: flex; justify-content: space-between; }
+  .thread-msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { padding: 8px 12px; border-radius: 6px; font-size: 13px; max-width: 90%; }
+  .msg.user { background: var(--stage-soft); align-self: flex-end; }
+  .msg.agent { background: #f1ede4; align-self: flex-start; }
+  .msg .who { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--ink-3); margin-bottom: 2px; }
+  .thread-input { padding: 10px; border-top: 1px solid var(--rule); display: flex; gap: 8px; }
+  .thread-input textarea {
+    flex: 1; resize: none; height: 46px; padding: 6px 8px; border: 1px solid var(--rule);
+    border-radius: 4px; font-family: var(--sans); font-size: 13px;
+  }
+
+  .staging-panel { padding: 14px 16px; background: #faf8f5; }
+  .staged-list { list-style: none; padding: 0; margin: 0 0 10px; max-height: 140px; overflow-y: auto; }
+  .staged-item {
+    font-size: 12px; padding: 6px 8px; background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .staged-item.pending { background: #fdfaf5; border-color: var(--stage); color: var(--stage); }
+  .send-btn {
+    width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none;
+    border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(31,28,24,0.4); display: none; align-items: center;
+    justify-content: center; z-index: 100;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 8px;
+    width: 90%; max-width: 540px; max-height: 85vh; overflow-y: auto; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .modal-box h3 { margin: 0 0 14px; font-family: var(--serif); font-size: 20px; font-weight: 500; }
+  .modal-row { margin-bottom: 14px; }
+  .modal-row label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+  .modal-row input, .modal-row select, .modal-row textarea {
+    width: 100%; padding: 8px; border: 1px solid var(--rule); border-radius: 4px; font-family: var(--sans); font-size: 13px;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    body { grid-template-rows: auto auto 1fr auto; grid-template-columns: 1fr; height: auto; min-height: 100vh; overflow-y: auto; }
+    nav { max-height: 200px; border-right: none; border-bottom: 1px solid var(--rule); }
+    aside { border-left: none; border-top: 1px solid var(--rule); height: 350px; }
+    #dag-view { min-height: 400px; }
+  }
+
+  /* Accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .dot.working, .spin, .hdr-btn.finish-ready { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>
+    Grill with Docs
+    <span class="dest" id="dest-display">Loading topic...</span>
+  </h1>
+  <div class="view-toggles">
+    <button id="toggle-dag" class="active" onclick="setView('dag')">Map Graph</button>
+    <button id="toggle-card" onclick="setView('card')">Decision Card</button>
+    <button id="toggle-visual" onclick="setView('visual')">
+      Visual Prototype
+      <span id="visual-pill" class="badge-pill" style="display:none;"></span>
+    </button>
+  </div>
+
+  <div class="header-actions">
+    <button id="terms-btn" class="hdr-btn" onclick="openTermsModal()">
+      Glossary (<span id="terms-count">0</span>)
+    </button>
+    <button id="adrs-btn" class="hdr-btn" onclick="openAdrsModal()">
+      ADRs (<span id="adrs-count">0</span>)
+    </button>
+    <button id="finish-btn" class="hdr-btn" onclick="openFinishModal()">
+      Finish Interview
+    </button>
+  </div>
+
+  <div class="status">
+    <span class="dot" id="agent-dot"></span>
+    <span id="agent-text">Connecting...</span>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-sec">
+    <div class="nav-hdr">Frontier (Actionable) <span id="frontier-count">0</span></div>
+    <div id="frontier-list"></div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-hdr">Blocked <span id="blocked-count">0</span></div>
+    <div id="blocked-list"></div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-hdr">Fog of War <span id="fog-count">0</span></div>
+    <div id="fog-list"></div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-hdr">Decisions & ADRs <span id="resolved-count">0</span></div>
+    <div id="resolved-list"></div>
+  </div>
+  <div class="nav-sec" id="out-of-scope-sec" style="display:none;">
+    <div class="nav-hdr">Out of Scope <span id="out-of-scope-count">0</span></div>
+    <div id="out-of-scope-list"></div>
+  </div>
+</nav>
+
+<main>
+  <svg id="dag-view"></svg>
+
+  <div id="card-view">
+    <!-- Ticket Card Mode -->
+    <div class="ticket-card" id="active-card">
+      <div class="card-top">
+        <div class="card-top-left">
+          <span class="card-id" id="c-id">Select a decision</span>
+          <span class="badge-type" id="c-type"></span>
+        </div>
+        <div id="c-adr-tag" style="display:none;">
+          <span class="card-adr-badge">🏛️ ADR Candidate</span>
+        </div>
+      </div>
+      <h2 class="card-h2" id="c-title">No decision selected</h2>
+      <div class="card-q" id="c-q">Select an open ticket from the left panel or click a node on the map.</div>
+      
+      <div class="rec-box" id="c-rec-box" style="display:none;">
+        <div class="rec-hdr">Recommended Decision & Rationale</div>
+        <div id="c-rec"></div>
+      </div>
+
+      <!-- Explore Pros/Cons Section if available -->
+      <div class="explore-table-box" id="c-explore-box" style="display:none;">
+        <div class="explore-hdr">Explored Trade-Off Analysis</div>
+        <table class="explore-table" id="c-explore-table"></table>
+      </div>
+
+      <ul class="options-list" id="c-opts"></ul>
+
+      <div class="custom-answer-box" id="c-custom-box" style="display:none;">
+        <label style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:4px;">
+          Or provide a nuanced / custom decision:
+        </label>
+        <textarea id="custom-answer-text" placeholder="Explain your chosen direction and rationale..."></textarea>
+        <button class="btn" onclick="stageCustomAnswer()">Stage Custom Decision</button>
+      </div>
+
+      <div class="card-actions" id="c-actions"></div>
+    </div>
+
+    <!-- Fog Graduation Form Mode -->
+    <div class="ticket-card" id="fog-grad-card" style="display:none;">
+      <div class="card-top">
+        <span class="card-id" id="fog-id-display">Fog Item</span>
+        <span class="badge-type badge-fog">FOG OF WAR</span>
+      </div>
+      <h2 class="card-h2">Graduate Fog into Decision Ticket</h2>
+      <p style="color:var(--ink-2); font-size:13px; margin-bottom:18px;">
+        Convert this unchartered design area into an actionable decision ticket on the Frontier DAG.
+      </p>
+
+      <div class="modal-row">
+        <label>Ticket ID</label>
+        <input type="text" id="fog-t-id" placeholder="e.g. t4" />
+      </div>
+      <div class="modal-row">
+        <label>Decision Title</label>
+        <input type="text" id="fog-t-title" placeholder="e.g. Storage engine selection" />
+      </div>
+      <div class="modal-row">
+        <label>Decision Type</label>
+        <select id="fog-t-type">
+          <option value="grilling">Grilling (Human Decision Interview)</option>
+          <option value="research">Research (Subagent Fact Exploration)</option>
+          <option value="prototype">Prototype (UI / Code Spike)</option>
+          <option value="task">Task (Deterministic Step)</option>
+        </select>
+      </div>
+      <div class="modal-row">
+        <label>Prerequisites (Blocked By Decisions)</label>
+        <div id="fog-blockers-list" style="max-height:120px; overflow-y:auto; border:1px solid var(--rule); border-radius:4px; padding:6px 10px; background:var(--panel);"></div>
+      </div>
+      <div class="modal-row">
+        <label>Core Question / Specification</label>
+        <textarea id="fog-t-question" style="height:60px;" placeholder="What decision needs to be answered?"></textarea>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-primary" onclick="submitFogGraduation()">Stage Graduated Decision</button>
+        <button class="btn" onclick="cancelFogGraduation()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visual Prototype / Architecture View -->
+  <div id="visual-view">
+    <div class="visual-toolbar">
+      <span style="font-weight:600;" id="visual-title">Architecture Visual</span>
+      <span class="badge-pill" id="visual-ver-chip">v0</span>
+      <span style="color:var(--ink-3); font-size:12px;" id="visual-at-text"></span>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn" onclick="stageAction({ type: 'visualize' })" id="regen-btn">Regenerate</button>
+      </div>
+    </div>
+    <div class="stale-banner" id="visual-stale-banner" style="display:none;">
+      <span>⚠️ This visual is out of date with recent decisions made during the interview.</span>
+      <button class="btn" style="padding:2px 8px; font-size:11px;" onclick="stageAction({ type: 'visualize' })">Update Now</button>
+    </div>
+    <div class="visual-frame-wrapper">
+      <iframe id="visual-frame" src="/visual"></iframe>
+      <div class="visual-placeholder" id="visual-placeholder" style="display:none;">
+        <div style="font-size:28px;">📐</div>
+        <div style="font-weight:600; font-size:16px;">No Architecture Visual Generated Yet</div>
+        <p style="max-width:400px; margin:0;">
+          Request a visual prototype or system diagram. A subagent will render it in the background while you plan.
+        </p>
+        <button class="btn btn-primary" onclick="stageAction({ type: 'visualize' })">Generate Initial Visual</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<aside>
+  <div class="thread-panel">
+    <div class="panel-hdr">
+      <span id="thread-hdr">Decision Discussion</span>
+      <span style="color:var(--ink-3); font-size:11px;" id="thread-count">0 msgs</span>
+    </div>
+    <div class="thread-msgs" id="thread-msgs"></div>
+    <div class="thread-input">
+      <textarea id="thread-text" placeholder="Add note, nuance, or question..."></textarea>
+      <button class="btn btn-primary" onclick="addThreadMsg()">Add</button>
+    </div>
+  </div>
+  <div class="staging-panel">
+    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--ink-3); margin-bottom:8px; display:flex; justify-content:space-between;">
+      <span>Staged Actions (<span id="staged-count">0</span>)</span>
+      <span id="pending-indicator" style="display:none; color:var(--stage); font-weight:600;"><span class="spin"></span> Sending...</span>
+    </div>
+    <ul class="staged-list" id="staged-list"></ul>
+    <button class="send-btn" id="send-btn" onclick="sendActions()">
+      Send to Agent (⌘↩)
+    </button>
+  </div>
+</aside>
+
+<!-- Finish Confirmation Modal -->
+<div class="modal-overlay" id="finish-modal">
+  <div class="modal-box">
+    <h3>Finish Design Interview</h3>
+    <p style="color:var(--ink-2); font-size:13px;">
+      Compiles the comprehensive Design Document, indexes all ADRs, synchronizes <code style="background:#f1ede4; padding:2px 4px; border-radius:3px;">CONTEXT.md</code>, and concludes the session.
+    </p>
+
+    <div style="background:#fdfaf5; border:1px solid var(--rule); border-radius:6px; padding:12px; margin-bottom:16px; font-size:13px;">
+      <div><strong>Topic:</strong> <span id="finish-dest"></span></div>
+      <div><strong>Target Doc:</strong> <span id="finish-doc-path"></span></div>
+      <div><strong>Locked Decisions:</strong> <span id="finish-resolved-count">0</span> tickets</div>
+      <div><strong>Architecture Decision Records (ADRs):</strong> <span id="finish-adr-count">0</span> created</div>
+      <div><strong>Glossary Terms:</strong> <span id="finish-terms-count">0</span> defined</div>
+      <div><strong>Remaining Frontier:</strong> <span id="finish-frontier-count">0</span> tickets</div>
+      <div><strong>Unresolved Fog:</strong> <span id="finish-fog-count">0</span> items</div>
+    </div>
+
+    <div id="finish-warning" style="display:none; color:var(--accent); background:var(--warn-soft); padding:8px 12px; border-radius:4px; font-size:12px; margin-bottom:16px;">
+      ⚠️ Frontier tickets or Fog items still remain. Finishing now will mark them as deferred.
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn" onclick="closeFinishModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmFinish()">Confirm & Finish Interview</button>
+    </div>
+  </div>
+</div>
+
+<!-- Terms / Glossary Modal -->
+<div class="modal-overlay" id="terms-modal">
+  <div class="modal-box">
+    <h3>Living Domain Glossary (CONTEXT.md)</h3>
+    <p style="color:var(--ink-2); font-size:13px; margin-bottom:14px;">
+      Canonical vocabulary locked during this session and synced inline to <code style="background:#f1ede4; padding:2px 4px; border-radius:3px;">CONTEXT.md</code>.
+    </p>
+    <div id="terms-list" style="display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto; margin-bottom:16px;"></div>
+
+    <div style="border-top:1px solid var(--rule); padding-top:14px;">
+      <h4 style="margin:0 0 10px; font-size:13px; font-weight:600;">Propose New Glossary Term</h4>
+      <div class="modal-row">
+        <label>Canonical Term</label>
+        <input type="text" id="new-term-name" placeholder="e.g. ExecutionPlan" />
+      </div>
+      <div class="modal-row">
+        <label>Definition (Single sentence)</label>
+        <input type="text" id="new-term-def" placeholder="e.g. An immutable sequence of operational steps." />
+      </div>
+      <div class="modal-row">
+        <label>Avoid Words (Comma separated)</label>
+        <input type="text" id="new-term-avoid" placeholder="e.g. recipe, script, job" />
+      </div>
+      <button class="btn btn-primary" onclick="submitNewTerm()">Stage Term</button>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+      <button class="btn" onclick="closeTermsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADRs Overview Modal -->
+<div class="modal-overlay" id="adrs-modal">
+  <div class="modal-box">
+    <h3>Architecture Decision Records (ADRs)</h3>
+    <p style="color:var(--ink-2); font-size:13px; margin-bottom:14px;">
+      Hard-to-reverse decisions with real trade-offs recorded in <code style="background:#f1ede4; padding:2px 4px; border-radius:3px;">docs/adr/</code>.
+    </p>
+    <div id="adrs-list" style="display:flex; flex-direction:column; gap:10px; max-height:360px; overflow-y:auto;"></div>
+    <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+      <button class="btn" onclick="closeAdrsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = null;
+let activeTicketId = null;
+let activeFogId = null;
+let storeKey = null;
+let lastOk = Date.now();
+let lastVisualVersion = null;
+
+// Persistent Local State Structure (survives refresh via localStorage)
+let local = freshLocal();
+function freshLocal() {
+  return {
+    staged: [],
+    pending: [],
+    drafts: {},
+    activeView: 'dag',
+    selectedTicketId: null
+  };
+}
+
+function loadLocal() {
+  local = freshLocal();
+  if (!storeKey) return;
+  try {
+    const raw = localStorage.getItem(storeKey);
+    if (raw) local = Object.assign(freshLocal(), JSON.parse(raw));
+  } catch (e) {}
+}
+
+function saveLocal() {
+  if (!storeKey) return;
+  try {
+    localStorage.setItem(storeKey, JSON.stringify(local));
+  } catch (e) {}
+}
+
+function commitLocal() {
+  saveLocal();
+  renderStaging();
+}
+
+function setView(view) {
+  local.activeView = view;
+  saveLocal();
+
+  document.body.classList.remove('show-card', 'show-visual');
+  document.getElementById('toggle-dag').classList.remove('active');
+  document.getElementById('toggle-card').classList.remove('active');
+  document.getElementById('toggle-visual').classList.remove('active');
+
+  if (view === 'card') {
+    document.body.classList.add('show-card');
+    document.getElementById('toggle-card').classList.add('active');
+    renderCard();
+  } else if (view === 'visual') {
+    document.body.classList.add('show-visual');
+    document.getElementById('toggle-visual').classList.add('active');
+    renderVisual();
+  } else {
+    document.getElementById('toggle-dag').classList.add('active');
+    renderDAG();
+  }
+}
+
+async function fetchState() {
+  try {
+    const res = await fetch('/state', { cache: 'no-store' });
+    if (res.ok) {
+      lastOk = Date.now();
+      const nextState = await res.json();
+      state = nextState;
+      onState();
+    } else {
+      checkOffline();
+    }
+  } catch (e) {
+    checkOffline();
+  }
+  setTimeout(fetchState, 1000);
+}
+
+function checkOffline() {
+  if (Date.now() - lastOk > 3000) {
+    document.getElementById('agent-text').textContent = 'Server offline';
+    document.getElementById('agent-dot').className = 'dot gone';
+  }
+}
+
+function onState() {
+  if (!state) return;
+
+  // Key storage strictly by project and creation timestamp
+  const key = 'grill-docs:' + (state.project || '') + ':' + (state.created || '');
+  if (key !== storeKey) {
+    storeKey = key;
+    loadLocal();
+    if (local.activeView) setView(local.activeView);
+    if (local.selectedTicketId) activeTicketId = local.selectedTicketId;
+  }
+
+  // Reconcile pending queue with agent's acknowledged sequence
+  const handled = Number(state.agent && state.agent.handled) || 0;
+  const stillPending = (local.pending || []).filter(p => p.seq > handled);
+  if (stillPending.length !== (local.pending || []).length) {
+    local.pending = stillPending;
+    saveLocal();
+  }
+
+  // Check if visual iframe requires reload
+  const v = state.visual;
+  if (v && v.version !== undefined && v.version !== lastVisualVersion) {
+    lastVisualVersion = v.version;
+    const frame = document.getElementById('visual-frame');
+    if (frame) frame.src = '/visual?t=' + Date.now();
+  }
+
+  renderApp();
+}
+
+function selectTicket(id) {
+  activeTicketId = id;
+  activeFogId = null;
+  local.selectedTicketId = id;
+  saveLocal();
+
+  document.getElementById('active-card').style.display = 'block';
+  document.getElementById('fog-grad-card').style.display = 'none';
+
+  renderNav();
+  renderCard();
+  renderThread();
+  if (local.activeView === 'dag') renderDAG();
+}
+
+function selectFog(id) {
+  activeFogId = id;
+  activeTicketId = null;
+  setView('card');
+
+  document.getElementById('active-card').style.display = 'none';
+  document.getElementById('fog-grad-card').style.display = 'block';
+
+  const fog = (state.fog || []).find(f => f.id === id);
+  if (fog) {
+    document.getElementById('fog-id-display').textContent = fog.id;
+    document.getElementById('fog-t-id').value = 't' + ((state.tickets || []).length + 1);
+    document.getElementById('fog-t-title').value = fog.title || fog.notes || '';
+    document.getElementById('fog-t-question').value = fog.notes || '';
+
+    // Populate blocker choices
+    const blockerContainer = document.getElementById('fog-blockers-list');
+    blockerContainer.innerHTML = (state.tickets || []).map(t => `
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:4px; cursor:pointer;">
+        <input type="checkbox" value="${t.id}" class="fog-blocker-cb" />
+        <span>#${t.id} - ${escapeHtml(t.title)}</span>
+      </label>
+    `).join('');
+  }
+}
+
+function cancelFogGraduation() {
+  activeFogId = null;
+  if ((state.tickets || []).length > 0) {
+    selectTicket(state.tickets[0].id);
+  } else {
+    setView('dag');
+  }
+}
+
+function submitFogGraduation() {
+  if (!activeFogId) return;
+  const id = document.getElementById('fog-t-id').value.trim();
+  const title = document.getElementById('fog-t-title').value.trim();
+  const type = document.getElementById('fog-t-type').value;
+  const question = document.getElementById('fog-t-question').value.trim();
+  const cbs = document.querySelectorAll('.fog-blocker-cb:checked');
+  const blocked_by = Array.from(cbs).map(cb => cb.value);
+
+  if (!id || !title) {
+    alert('Ticket ID and Title are required.');
+    return;
+  }
+
+  stageAction({
+    type: 'graduate_fog',
+    fog_id: activeFogId,
+    ticket: {
+      id,
+      title,
+      type,
+      blocked_by,
+      question
+    }
+  });
+
+  cancelFogGraduation();
+}
+
+function renderApp() {
+  if (!state) return;
+  document.getElementById('dest-display').textContent = state.topic || state.destination || 'Untitled Topic';
+
+  const isWorking = state.agent && state.agent.status === 'working';
+  const hasPending = (local.pending || []).length > 0;
+  document.getElementById('agent-dot').className = isWorking ? 'dot working' : 'dot';
+  document.getElementById('agent-text').textContent = isWorking ? 'Agent working...' : 'Agent listening';
+  document.getElementById('pending-indicator').style.display = hasPending ? 'inline-block' : 'none';
+
+  const tickets = state.tickets || [];
+  if (!activeTicketId && !activeFogId && tickets.length > 0) {
+    const frontier = tickets.find(t => t.status === 'frontier');
+    activeTicketId = frontier ? frontier.id : tickets[0].id;
+  }
+
+  // Header Terms & ADRs Indicators
+  const terms = state.terms || [];
+  document.getElementById('terms-count').textContent = terms.length;
+
+  const adrsCount = tickets.filter(t => t.durable || t.adr_file).length + (Array.isArray(state.adrs) ? state.adrs.length : 0);
+  document.getElementById('adrs-count').textContent = adrsCount;
+
+  const v = state.visual;
+  const pill = document.getElementById('visual-pill');
+  if (v && v.version >= 1) {
+    pill.style.display = 'inline';
+    pill.textContent = 'v' + v.version;
+    pill.className = v.stale ? 'badge-pill stale' : 'badge-pill';
+  } else {
+    pill.style.display = 'none';
+  }
+
+  // Finish Interview Readiness
+  const frontierCount = tickets.filter(t => t.status === 'frontier').length;
+  const fogCount = (state.fog || []).length;
+  const finishBtn = document.getElementById('finish-btn');
+  if (frontierCount === 0 && fogCount === 0 && tickets.length > 0) {
+    finishBtn.classList.add('finish-ready');
+  } else {
+    finishBtn.classList.remove('finish-ready');
+  }
+
+  renderNav();
+  renderCard();
+  renderThread();
+  renderStaging();
+  if (local.activeView === 'dag') renderDAG();
+  if (local.activeView === 'visual') renderVisual();
+}
+
+function renderNav() {
+  const tickets = state.tickets || [];
+  const frontier = tickets.filter(t => t.status === 'frontier');
+  const blocked = tickets.filter(t => t.status === 'blocked');
+  const resolved = tickets.filter(t => t.status === 'resolved');
+  const outOfScope = state.out_of_scope || [];
+  const fog = state.fog || [];
+
+  document.getElementById('frontier-count').textContent = frontier.length;
+  document.getElementById('blocked-count').textContent = blocked.length;
+  document.getElementById('resolved-count').textContent = resolved.length;
+  document.getElementById('fog-count').textContent = fog.length;
+
+  const renderItem = (t) => {
+    const isAdr = t.durable || t.adr_file;
+    return `
+      <div class="nav-item ${t.id === activeTicketId ? 'active' : ''}" onclick="selectTicket('${t.id}')">
+        <span class="badge-type badge-${t.type || 'grilling'}">${(t.type || 'G')[0]}</span>
+        <span class="nav-title">${escapeHtml(t.title)}</span>
+        ${isAdr ? `<span class="badge-adr-nav">ADR</span>` : ''}
+      </div>
+    `;
+  };
+
+  document.getElementById('frontier-list').innerHTML = frontier.map(renderItem).join('');
+  document.getElementById('blocked-list').innerHTML = blocked.map(renderItem).join('');
+  document.getElementById('resolved-list').innerHTML = resolved.map(renderItem).join('');
+
+  document.getElementById('fog-list').innerHTML = fog.map(f => `
+    <div class="nav-item ${f.id === activeFogId ? 'active' : ''}" onclick="selectFog('${f.id}')">
+      <span style="font-size:12px; color:var(--fog);">☁</span>
+      <span class="nav-title">${escapeHtml(f.title || f.notes)}</span>
+      <button class="nav-btn-grad" onclick="event.stopPropagation(); selectFog('${f.id}');">Graduate</button>
+    </div>
+  `).join('');
+
+  const oosSec = document.getElementById('out-of-scope-sec');
+  if (outOfScope.length > 0) {
+    oosSec.style.display = 'block';
+    document.getElementById('out-of-scope-count').textContent = outOfScope.length;
+    document.getElementById('out-of-scope-list').innerHTML = outOfScope.map(o => `
+      <div class="nav-item">
+        <span style="color:var(--ink-3); font-size:11px;">✕</span>
+        <span class="nav-title">${escapeHtml(o.title || o.id || o.notes)}</span>
+      </div>
+    `).join('');
+  } else {
+    oosSec.style.display = 'none';
+  }
+}
+
+function renderCard() {
+  if (!state || !activeTicketId) return;
+  const t = (state.tickets || []).find(x => x.id === activeTicketId);
+  if (!t) return;
+
+  document.getElementById('c-id').textContent = `Decision #${t.id} (${t.status})`;
+  const badge = document.getElementById('c-type');
+  badge.textContent = t.type || 'grilling';
+  badge.className = `badge-type badge-${t.type || 'grilling'}`;
+
+  const adrTag = document.getElementById('c-adr-tag');
+  if (t.durable || t.adr_file) {
+    adrTag.style.display = 'block';
+    adrTag.innerHTML = `<span class="card-adr-badge">🏛️ ${t.adr_file ? escapeHtml(t.adr_file) : 'ADR Candidate'}</span>`;
+  } else {
+    adrTag.style.display = 'none';
+  }
+
+  document.getElementById('c-title').textContent = t.title;
+  document.getElementById('c-q').textContent = t.question || 'No question specified.';
+
+  const recBox = document.getElementById('c-rec-box');
+  if (t.rec) {
+    recBox.style.display = 'block';
+    document.getElementById('c-rec').textContent = t.rec.why ? `${t.rec.option ? t.rec.option + ': ' : ''}${t.rec.why}` : JSON.stringify(t.rec);
+  } else {
+    recBox.style.display = 'none';
+  }
+
+  // Render Explore Table if available
+  const exploreBox = document.getElementById('c-explore-box');
+  if (t.explore && Array.isArray(t.explore.rows) && t.explore.rows.length > 0) {
+    exploreBox.style.display = 'block';
+    const rowsHtml = t.explore.rows.map(r => `
+      <tr>
+        <td style="font-weight:600; width:25%;">${escapeHtml(r.option)}</td>
+        <td style="width:37%;">
+          <ul class="pros-list">${(r.pros || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+        </td>
+        <td style="width:38%;">
+          <ul class="cons-list">${(r.cons || []).map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('c-explore-table').innerHTML = `
+      <thead>
+        <tr><th>Option</th><th>Pros</th><th>Cons</th></tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    `;
+  } else {
+    exploreBox.style.display = 'none';
+  }
+
+  const opts = document.getElementById('c-opts');
+  opts.innerHTML = (t.options || []).map(o => `
+    <li class="opt-item ${t.rec && t.rec.option === o.k ? 'rec' : ''}" onclick="stageAnswer('${t.id}', '${o.k}', '${escapeHtml(o.text)}')">
+      <span class="opt-k">${o.k}</span>
+      <span>${escapeHtml(o.text)}</span>
+    </li>
+  `).join('');
+
+  document.getElementById('c-custom-box').style.display = 'block';
+
+  // Restore draft custom answer if present
+  const draftAns = (local.drafts[activeTicketId] && local.drafts[activeTicketId].answer) || '';
+  document.getElementById('custom-answer-text').value = draftAns;
+
+  const actions = document.getElementById('c-actions');
+  actions.innerHTML = `
+    ${t.rec ? `<button class="btn btn-primary" onclick="stageAnswer('${t.id}', '${t.rec.option || 'REC'}', 'Accept Recommendation')">Accept Recommendation</button>` : ''}
+    <button class="btn btn-adr" onclick="stageAction({ type: 'toggle_adr', ticket_id: '${t.id}' })">
+      ${t.durable ? '✓ Marked as ADR' : '🏛️ Flag as ADR'}
+    </button>
+    <button class="btn" onclick="stageAction({ type: 'explore', ticket_id: '${t.id}' })">🔍 Explore Options</button>
+    ${t.type === 'research' ? `<button class="btn" onclick="stageAction({ type: 'trigger_research', ticket_id: '${t.id}' })">Trigger Research</button>` : ''}
+    <button class="btn" onclick="stageAction({ type: 'rule_out_of_scope', ticket_id: '${t.id}' })">Rule Out of Scope</button>
+  `;
+}
+
+function renderVisual() {
+  if (!state) return;
+  const v = state.visual;
+  const frame = document.getElementById('visual-frame');
+  const placeholder = document.getElementById('visual-placeholder');
+  const staleBanner = document.getElementById('visual-stale-banner');
+
+  if (v && v.version >= 1) {
+    frame.style.display = 'block';
+    placeholder.style.display = 'none';
+    document.getElementById('visual-title').textContent = (v.kind ? v.kind.toUpperCase() : 'ARCHITECTURE') + ' PROTOTYPE';
+    document.getElementById('visual-ver-chip').textContent = 'v' + v.version;
+    document.getElementById('visual-at-text').textContent = v.at ? new Date(v.at).toLocaleTimeString() : '';
+    staleBanner.style.display = v.stale ? 'flex' : 'none';
+  } else {
+    frame.style.display = 'none';
+    placeholder.style.display = 'flex';
+    staleBanner.style.display = 'none';
+  }
+}
+
+function renderThread() {
+  if (!state) return;
+  let msgs = [];
+  if (local.activeView === 'visual') {
+    document.getElementById('thread-hdr').textContent = 'Visual Discussion';
+    msgs = state.visual && Array.isArray(state.visual.thread) ? state.visual.thread : [];
+  } else if (activeTicketId) {
+    const t = (state.tickets || []).find(x => x.id === activeTicketId);
+    document.getElementById('thread-hdr').textContent = t ? `Discussion (#${t.id})` : 'Decision Discussion';
+    msgs = t && Array.isArray(t.thread) ? t.thread : [];
+  }
+
+  document.getElementById('thread-count').textContent = msgs.length + ' msgs';
+  const container = document.getElementById('thread-msgs');
+  container.innerHTML = msgs.map(m => `
+    <div class="msg ${m.who === 'user' ? 'user' : 'agent'}">
+      <div class="who">${m.who}</div>
+      <div>${escapeHtml(m.text)}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+
+  // Restore draft thread message
+  const draftKey = local.activeView === 'visual' ? '__visual' : activeTicketId;
+  const draftMsg = (local.drafts[draftKey] && local.drafts[draftKey].thread) || '';
+  document.getElementById('thread-text').value = draftMsg;
+}
+
+function addThreadMsg() {
+  const area = document.getElementById('thread-text');
+  const text = area.value.trim();
+  if (!text) return;
+
+  if (local.activeView === 'visual') {
+    stageAction({ type: 'visual-feedback', text });
+    delete (local.drafts['__visual'] || {}).thread;
+  } else if (activeTicketId) {
+    stageAction({ type: 'thread_message', ticket_id: activeTicketId, text });
+    delete (local.drafts[activeTicketId] || {}).thread;
+  }
+  area.value = '';
+  saveLocal();
+}
+
+function stageAnswer(ticket_id, option, text) {
+  stageAction({ type: 'answer_ticket', ticket_id, kind: 'option', option, text });
+}
+
+function stageCustomAnswer() {
+  if (!activeTicketId) return;
+  const area = document.getElementById('custom-answer-text');
+  const text = area.value.trim();
+  if (!text) return;
+  stageAction({ type: 'answer_ticket', ticket_id: activeTicketId, kind: 'text', text });
+  area.value = '';
+  delete (local.drafts[activeTicketId] || {}).answer;
+  saveLocal();
+}
+
+function stageAction(action) {
+  local.staged.push(action);
+  commitLocal();
+}
+
+function removeStagedAction(index) {
+  local.staged.splice(index, 1);
+  commitLocal();
+}
+
+function renderStaging() {
+  const list = document.getElementById('staged-list');
+  const staged = local.staged || [];
+  const pending = local.pending || [];
+  document.getElementById('staged-count').textContent = staged.length;
+
+  let html = '';
+  pending.forEach(p => {
+    (p.actions || []).forEach(a => {
+      html += `
+        <li class="staged-item pending">
+          <span><span class="spin"></span> ${a.type} ${a.ticket_id ? '#' + a.ticket_id : ''}</span>
+          <span style="font-size:10px;">in flight</span>
+        </li>
+      `;
+    });
+  });
+
+  staged.forEach((a, i) => {
+    html += `
+      <li class="staged-item">
+        <span>${a.type} ${a.ticket_id ? '#' + a.ticket_id : ''} ${a.option || a.term || ''}</span>
+        <span style="cursor:pointer; color:var(--accent); font-weight:bold;" onclick="removeStagedAction(${i})">&times;</span>
+      </li>
+    `;
+  });
+
+  list.innerHTML = html;
+  const isWorking = state && state.agent && state.agent.status === 'working';
+  document.getElementById('send-btn').disabled = staged.length === 0 || isWorking || pending.length > 0;
+}
+
+async function sendActions() {
+  const staged = local.staged || [];
+  if (staged.length === 0) return;
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  try {
+    const res = await fetch('/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ actions: staged })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      local.pending.push({ seq: data.seq, actions: staged });
+      local.staged = [];
+      saveLocal();
+      renderStaging();
+      await fetchState();
+    } else {
+      alert('Send failed with HTTP ' + res.status);
+    }
+  } catch (e) {
+    alert('Send failed: ' + e.message);
+  } finally {
+    btn.textContent = 'Send to Agent (⌘↩)';
+  }
+}
+
+function renderDAG() {
+  const svg = document.getElementById('dag-view');
+  if (!state || !svg || local.activeView !== 'dag') return;
+  const tickets = state.tickets || [];
+  if (tickets.length === 0) {
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9a9285">No decision tickets charted yet.</text>';
+    return;
+  }
+
+  const rank = new Map();
+  function getRank(id, visited = new Set()) {
+    if (rank.has(id)) return rank.get(id);
+    if (visited.has(id)) return 0;
+    visited.add(id);
+    const t = tickets.find(x => x.id === id);
+    if (!t || !Array.isArray(t.blocked_by) || t.blocked_by.length === 0) {
+      rank.set(id, 0);
+      return 0;
+    }
+    const r = 1 + Math.max(...t.blocked_by.map(b => getRank(b, new Set(visited))));
+    rank.set(id, r);
+    return r;
+  }
+  tickets.forEach(t => getRank(t.id));
+
+  const maxRank = Math.max(0, ...rank.values());
+  const cols = [];
+  for (let r = 0; r <= maxRank; r++) cols.push([]);
+  tickets.forEach(t => cols[rank.get(t.id)].push(t));
+
+  const nodeW = 184, nodeH = 74, gapX = 80, gapY = 32;
+  const positions = new Map();
+
+  let html = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#b0a89d"/></marker></defs>';
+
+  cols.forEach((col, cIdx) => {
+    const x = 50 + cIdx * (nodeW + gapX);
+    col.forEach((t, rIdx) => {
+      const y = 50 + rIdx * (nodeH + gapY);
+      positions.set(t.id, { x, y, cx: x + nodeW / 2, cy: y + nodeH / 2 });
+    });
+  });
+
+  // Render edges
+  tickets.forEach(t => {
+    const to = positions.get(t.id);
+    (t.blocked_by || []).forEach(fromId => {
+      const from = positions.get(fromId);
+      if (from && to) {
+        const x1 = from.x + nodeW;
+        const y1 = from.cy;
+        const x2 = to.x;
+        const y2 = to.cy;
+        const dx = (x2 - x1) / 2;
+        html += `<path d="M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}" stroke="#b0a89d" stroke-width="2" fill="none" marker-end="url(#arrow)" />`;
+      }
+    });
+  });
+
+  // Render nodes
+  tickets.forEach(t => {
+    const p = positions.get(t.id);
+    if (!p) return;
+    const isFrontier = t.status === 'frontier';
+    const isResolved = t.status === 'resolved';
+    const isSelected = t.id === activeTicketId;
+    const isAdr = t.durable || t.adr_file;
+    const stroke = isSelected ? 'var(--accent)' : isAdr ? 'var(--adr)' : isFrontier ? 'var(--stage)' : isResolved ? 'var(--ok)' : 'var(--rule)';
+    const fill = isSelected ? '#fffdfa' : '#ffffff';
+
+    html += `
+      <g transform="translate(${p.x},${p.y})" style="cursor:pointer;" onclick="selectTicket('${t.id}'); setView('card');">
+        <rect width="${nodeW}" height="${nodeH}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="${isSelected || isFrontier || isAdr ? 2 : 1}" />
+        <text x="12" y="22" font-size="10" font-weight="700" fill="var(--ink-3)">#${t.id} · ${(t.type || 'G').toUpperCase()}${isAdr ? ' · 🏛️ ADR' : ''}</text>
+        <text x="12" y="42" font-size="12" font-weight="600" fill="var(--ink)" width="160">${escapeHtml(t.title.slice(0, 24))}${t.title.length > 24 ? '…' : ''}</text>
+        <text x="12" y="60" font-size="10" fill="${isResolved ? 'var(--ok)' : isFrontier ? 'var(--stage)' : 'var(--ink-3)'}">${t.status.toUpperCase()}</text>
+      </g>
+    `;
+  });
+
+  svg.innerHTML = html;
+}
+
+// Modals Handling
+function openFinishModal() {
+  if (!state) return;
+  const tickets = state.tickets || [];
+  const frontier = tickets.filter(t => t.status === 'frontier');
+  const resolved = tickets.filter(t => t.status === 'resolved');
+  const fog = state.fog || [];
+  const terms = state.terms || [];
+  const adrsCount = tickets.filter(t => t.durable || t.adr_file).length + (Array.isArray(state.adrs) ? state.adrs.length : 0);
+
+  document.getElementById('finish-dest').textContent = state.topic || state.destination || 'Current Topic';
+  document.getElementById('finish-doc-path').textContent = state.doc || 'docs/design.md';
+  document.getElementById('finish-resolved-count').textContent = resolved.length;
+  document.getElementById('finish-adr-count').textContent = adrsCount;
+  document.getElementById('finish-terms-count').textContent = terms.length;
+  document.getElementById('finish-frontier-count').textContent = frontier.length;
+  document.getElementById('finish-fog-count').textContent = fog.length;
+
+  document.getElementById('finish-warning').style.display = (frontier.length > 0 || fog.length > 0) ? 'block' : 'none';
+  document.getElementById('finish-modal').style.display = 'flex';
+}
+
+function closeFinishModal() {
+  document.getElementById('finish-modal').style.display = 'none';
+}
+
+function confirmFinish() {
+  stageAction({ type: 'finish' });
+  closeFinishModal();
+}
+
+function openTermsModal() {
+  if (!state) return;
+  const terms = state.terms || [];
+  const list = document.getElementById('terms-list');
+  if (terms.length === 0) {
+    list.innerHTML = '<p style="color:var(--ink-3); font-size:13px;">No domain terms recorded yet.</p>';
+  } else {
+    list.innerHTML = terms.map(t => `
+      <div style="border:1px solid var(--rule); border-radius:6px; padding:10px; background:var(--panel);">
+        <div style="font-weight:600; font-size:14px; margin-bottom:2px;">${escapeHtml(t.term)}</div>
+        <div style="color:var(--ink-2); font-size:13px; margin-bottom:4px;">${escapeHtml(t.def)}</div>
+        ${t.avoid && t.avoid.length ? `<div style="font-size:11px; color:var(--accent);">Avoid: ${escapeHtml(t.avoid.join(', '))}</div>` : ''}
+      </div>
+    `).join('');
+  }
+  document.getElementById('terms-modal').style.display = 'flex';
+}
+
+function closeTermsModal() {
+  document.getElementById('terms-modal').style.display = 'none';
+}
+
+function submitNewTerm() {
+  const name = document.getElementById('new-term-name').value.trim();
+  const def = document.getElementById('new-term-def').value.trim();
+  const avoidRaw = document.getElementById('new-term-avoid').value.trim();
+  if (!name || !def) {
+    alert('Term name and definition are required.');
+    return;
+  }
+  const avoid = avoidRaw ? avoidRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  stageAction({ type: 'add_term', term: name, def, avoid });
+  document.getElementById('new-term-name').value = '';
+  document.getElementById('new-term-def').value = '';
+  document.getElementById('new-term-avoid').value = '';
+  closeTermsModal();
+}
+
+function openAdrsModal() {
+  if (!state) return;
+  const tickets = state.tickets || [];
+  const adrTickets = tickets.filter(t => t.durable || t.adr_file);
+  const list = document.getElementById('adrs-list');
+
+  if (adrTickets.length === 0) {
+    list.innerHTML = '<p style="color:var(--ink-3); font-size:13px;">No ADRs produced yet. Use the "Flag as ADR" button on durable decisions.</p>';
+  } else {
+    list.innerHTML = adrTickets.map(t => `
+      <div style="border:1px solid #d4bee8; border-radius:6px; padding:12px; background:var(--adr-soft);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-weight:600; font-size:14px; color:var(--adr);">${escapeHtml(t.title)}</span>
+          <span style="font-size:11px; font-weight:700; color:var(--adr);">${t.status.toUpperCase()}</span>
+        </div>
+        <div style="font-size:12px; color:var(--ink-2); margin-bottom:6px;">${escapeHtml(t.question || '')}</div>
+        ${t.adr_file ? `<div style="font-size:11px; font-family:monospace; color:var(--ink-3);">File: ${escapeHtml(t.adr_file)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+  document.getElementById('adrs-modal').style.display = 'flex';
+}
+
+function closeAdrsModal() {
+  document.getElementById('adrs-modal').style.display = 'none';
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Auto-save form drafts to prevent accidental loss
+document.getElementById('thread-text').addEventListener('input', (e) => {
+  const draftKey = local.activeView === 'visual' ? '__visual' : activeTicketId;
+  if (!draftKey) return;
+  local.drafts[draftKey] = local.drafts[draftKey] || {};
+  local.drafts[draftKey].thread = e.target.value;
+  saveLocal();
+});
+
+document.getElementById('custom-answer-text').addEventListener('input', (e) => {
+  if (!activeTicketId) return;
+  local.drafts[activeTicketId] = local.drafts[activeTicketId] || {};
+  local.drafts[activeTicketId].answer = e.target.value;
+  saveLocal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    sendActions();
+  }
+  if (e.key === 'Escape') {
+    closeFinishModal();
+    closeTermsModal();
+    closeAdrsModal();
+  }
+});
+
+fetchState();
+</script>
+</body>
+</html>
